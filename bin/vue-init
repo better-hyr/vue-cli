@@ -1,16 +1,26 @@
 #!/usr/bin/env node
 
+// 从仓库下载并提取git仓库
 const download = require('download-git-repo')
+// 主要用于创建子命令和切割命令行参数并执行
 const program = require('commander')
+// 检查文件是否存在
 const exists = require('fs').existsSync
+// 路径模块用于处理文件和目录路径，如路径分割，文件路径格式化，json格式化等
 const path = require('path')
+// 漂亮的loding
 const ora = require('ora')
+// 获取用户主目录的路径
 const home = require('user-home')
+// 绝对路径转换为相对路径
 const tildify = require('tildify')
+// 美化
 const chalk = require('chalk')
+// 常用的交互式命令行用户界面的集合，表现为控制台输出提问
 const inquirer = require('inquirer')
 const rm = require('rimraf').sync
 const logger = require('../lib/logger')
+// 输出信息
 const generate = require('../lib/generate')
 const checkVersion = require('../lib/check-version')
 const warnings = require('../lib/warnings')
@@ -57,15 +67,17 @@ help()
  * Settings.
  */
 
-let template = program.args[0]
+let template = program.args[0]  // <template-name>
 const hasSlash = template.indexOf('/') > -1
-const rawName = program.args[1]
+const rawName = program.args[1]  // [project-name]
 const inPlace = !rawName || rawName === '.'
 const name = inPlace ? path.relative('../', process.cwd()) : rawName
 const to = path.resolve(rawName || '.')
 const clone = program.clone || false
 
+// home输出举例 => /Users/admin, tmp => /Users/admin/.vue-templates/webpack
 const tmp = path.join(home, '.vue-templates', template.replace(/\//g, '-'))
+// 如果是线下，则template直接取这个路径，否则需要去线上仓库下载
 if (program.offline) {
   console.log(`> Use cached template at ${chalk.yellow(tildify(tmp))}`)
   template = tmp
@@ -101,7 +113,7 @@ if (exists(to)) {
  */
 
 function run () {
-  // check if template is local
+  // 检查要下载的模版是否是本地路径
   if (isLocalPath(template)) {
     const templatePath = getTemplatePath(template)
     if (exists(templatePath)) {
@@ -114,9 +126,10 @@ function run () {
       logger.fatal('Local template "%s" not found.', template)
     }
   } else {
+    // 检查版本
     checkVersion(() => {
       if (!hasSlash) {
-        // use official templates
+        // 使用线上版本
         const officialTemplate = 'vuejs-templates/' + template
         if (template.indexOf('#') !== -1) {
           downloadAndGenerate(officialTemplate)
@@ -143,13 +156,17 @@ function run () {
  */
 
 function downloadAndGenerate (template) {
+  // 启动控制台loading
   const spinner = ora('downloading template')
   spinner.start()
-  // Remove if local template exists
+  // 如果存在本地模版则移除
   if (exists(tmp)) rm(tmp)
+  // 下载
   download(template, tmp, { clone }, err => {
     spinner.stop()
+    // 日志
     if (err) logger.fatal('Failed to download repo ' + template + ': ' + err.message.trim())
+    // 控制台打印出模版信息，比如 Generated "my-project".
     generate(name, tmp, to, err => {
       if (err) logger.fatal(err)
       console.log()
